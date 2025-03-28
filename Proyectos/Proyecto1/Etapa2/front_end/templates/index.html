@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Fake News Detector</title>
+    <link rel="stylesheet" href="/static/styles.css" />
+  </head>
+  <body>
+    <header>
+      <h1>Fake News Detector</h1>
+    </header>
+
+    <main>
+      <!-- Formulario de predicción -->
+      <section>
+        <h2>Predicción</h2>
+        <form id="predict-form">
+          <label for="text">Texto:</label>
+          <input
+            type="text"
+            id="text"
+            name="text"
+            placeholder="Escribe el título de la noticia"
+          />
+          <label for="opinion_file">Archivo:</label>
+          <input type="file" id="opinion_file" name="opinion_file" />
+          <button type="submit">Enviar</button>
+        </form>
+        <div id="predict-result"></div>
+      </section>
+
+      <hr />
+
+      <!-- Formulario de reentrenamiento -->
+      <section>
+        <h2>Reentrenamiento del Modelo</h2>
+        <form id="retrain-form">
+          <label for="labels_file">Archivo de entrenamiento:</label>
+          <input type="file" id="labels_file" name="labels_file" />
+          <button type="submit">Reentrenar</button>
+        </form>
+        <div id="retrain-result"></div>
+      </section>
+    </main>
+
+    <footer>
+      <p>Fake News Detector - Todos los derechos reservados.</p>
+    </footer>
+
+    <script src="/static/app.js"></script>
+  </body>
+</html>

@@ -9,32 +9,49 @@
   <body>
     <header>
       <h1>Fake News Detector</h1>
+      <p>
+        Detecta si una noticia es falsa o verdadera utilizando un modelo
+        preentrenado.
+      </p>
     </header>
 
     <main>
-      <!-- Formulario de predicción -->
+      <!-- Sección para cargar el modelo -->
+      <section>
+        <h2>Cargar Modelo</h2>
+        <form id="load-model-form">
+          <label for="model_file">Archivo del modelo (formato .pkl):</label>
+          <input type="file" id="model_file" name="model_file" />
+          <button type="submit">Cargar Modelo</button>
+        </form>
+        <div id="load-model-result"></div>
+      </section>
+
+      <hr />
+
+      <!-- Sección de predicción -->
       <section>
         <h2>Predicción</h2>
         <form id="predict-form">
-          <label for="text">Texto:</label>
+          <label for="text">Texto de la noticia:</label>
           <input
             type="text"
             id="text"
             name="text"
-            placeholder="Escribe el título de la noticia"
+            placeholder="Escribe el título de la noticia..."
           />
-          <label for="opinion_file">Archivo:</label>
+          <label for="opinion_file">Archivo (opcional):</label>
           <input type="file" id="opinion_file" name="opinion_file" />
-          <button type="submit">Enviar</button>
+          <button type="submit">Enviar a Predicción</button>
         </form>
         <div id="predict-result"></div>
       </section>
 
       <hr />
 
-      <!-- Formulario de reentrenamiento -->
+      <!-- Sección de reentrenamiento -->
       <section>
-        <h2>Reentrenamiento del Modelo</h2>
+        <h2>Reentrenar el Modelo</h2>
         <form id="retrain-form">
           <label for="labels_file">Archivo de entrenamiento:</label>
           <input type="file" id="labels_file" name="labels_file" />
@@ -43,10 +60,6 @@
         <div id="retrain-result"></div>
       </section>
     </main>
-
-    <footer>
-      <p>Fake News Detector - Todos los derechos reservados.</p>
-    </footer>
 
     <script src="/static/app.js"></script>
   </body>

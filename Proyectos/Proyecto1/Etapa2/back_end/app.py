@@ -2,41 +2,72 @@ from flask import Flask, request, render_template, jsonify
 from werkzeug.utils import secure_filename
 import os
 import traceback
-import model.model_utils as model_utils  # Funciones para cargar/reentrenar el modelo
+import joblib
+import pandas as pd
+from sklearn.pipeline import Pipeline
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import precision_score, recall_score, f1_score
 
-# Especificamos las rutas de las carpetas de plantillas y estáticos
+# Configuración inicial
 app = Flask(__name__, 
             template_folder='../front_end/templates', 
             static_folder='../front_end/static')
 
-# Ruta para archivo del modelo
 MODEL_PATH = 'model/model.pkl'
 ALLOWED_EXTENSIONS = {'xlsx', 'csv'}
 app.config['UPLOAD_FOLDER'] = 'temp'
 
-# Inicializamos el modelo en `None`
-model = None
+model = None  # Declaración global del modelo
 
-# Función para verificar extensiones de archivo permitidos
+
+# Helper: Validar extensiones de archivo
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+
+# Helper: Cargar pipeline
+def load_model(file_path=None):
+    file_path = file_path or MODEL_PATH
+    if os.path.exists(file_path):
+        loaded_model = joblib.load(file_path)
+        if not isinstance(loaded_model, Pipeline):
+            raise ValueError("El modelo no es un pipeline válido. Verifica el proceso de entrenamiento.")
+        return loaded_model
+    raise FileNotFoundError("Modelo no encontrado en la ruta: {}".format(file_path))
+
+
+# Helper: Guardar modelo
+def save_model(model_object, file_path=None):
+    file_path = file_path or MODEL_PATH
+    joblib.dump(model_object, file_path)
+
+
+# Helper: Crear pipeline (reentrenamiento)
+def create_pipeline():
+    return Pipeline([
+        ('vectorizer', TfidfVectorizer(max_features=10000)),
+        ('classifier', RandomForestClassifier(n_estimators=100, random_state=42))
+    ])
+
 
 @app.route('/')
 def index():
     """Renderiza la interfaz principal."""
     return render_template('index.html')
 
+
 @app.route('/load_model', methods=['POST'])
-def load_model():
-    """Endpoint para cargar un archivo de modelo."""
-    global model  # Declaración global de la variable model
+def load_model_endpoint():
+    """Endpoint para cargar archivo de modelo."""
+    global model
     model_file = request.files.get('model_file')
 
     if model_file and model_file.filename.endswith('.pkl'):
         file_path = os.path.join(app.config['UPLOAD_FOLDER'], secure_filename(model_file.filename))
         model_file.save(file_path)
         try:
-            model = model_utils.load_model(file_path)
+            model = load_model(file_path)
             return jsonify({'message': 'Modelo cargado exitosamente'}), 200
         except Exception as e:
             traceback.print_exc()
@@ -44,27 +75,28 @@ def load_model():
     else:
         return jsonify({'error': 'Debe proporcionar un archivo .pkl válido'}), 400
 
+
 @app.route('/predict', methods=['POST'])
 def predict():
     """Endpoint para realizar predicciones."""
-    global model  # Declaración global de model
+    global model
     if model is None:
         return jsonify({'error': 'El modelo no está cargado. Por favor, cargue el modelo primero.'}), 400
 
     try:
         text = request.form.get('text')  # Entrada de texto
-        opinion_file = request.files.get('opinion_file')  # Entrada de archivo
         predictions = {}
 
         if text:
-            data_instance = {'text_input': text}
-            predictions = model_utils.predict(model, [data_instance])
-        elif opinion_file and allowed_file(opinion_file.filename):
-            file_path = os.path.join(app.config['UPLOAD_FOLDER'], secure_filename(opinion_file.filename))
-            opinion_file.save(file_path)
-            predictions = model_utils.predict_from_file(model, file_path)
+            text_data = [text]
+            pred_class = model.predict(text_data)
+            pred_proba = model.predict_proba(text_data).tolist()
+            predictions = {
+                'prediction': int(pred_class[0]),
+                'probabilities': pred_proba[0]
+            }
         else:
-            return jsonify({'error': 'Debe proporcionar un texto o un archivo válido'}), 400
+            return jsonify({'error': 'Debe proporcionar un texto válido'}), 400
 
         return jsonify({'predictions': predictions})
 
@@ -72,10 +104,11 @@ def predict():
         traceback.print_exc()
         return jsonify({'error': str(e)}), 500
 
+
 @app.route('/retrain', methods=['POST'])
 def retrain():
-    """Endpoint para reentrenar el modelo."""
-    global model  # Declaración global de model
+    """Endpoint para reentrenar el modelo con archivo etiquetado."""
+    global model
     if model is None:
         return jsonify({'error': 'El modelo no está cargado. Por favor, cargue el modelo primero.'}), 400
 
@@ -85,16 +118,41 @@ def retrain():
         if labels_file and allowed_file(labels_file.filename):
             file_path = os.path.join(app.config['UPLOAD_FOLDER'], secure_filename(labels_file.filename))
             labels_file.save(file_path)
-            new_model, metrics = model_utils.retrain_model(MODEL_PATH, file_path)
-            model_utils.save_model(new_model, MODEL_PATH)
-            model = new_model  # Actualización del modelo después del reentrenamiento
-            return jsonify({'message': 'Modelo reentrenado exitosamente', 'metrics': metrics})
+            # Cargar datos desde archivo etiquetado
+            data = pd.read_excel(file_path) if file_path.endswith(".xlsx") else pd.read_csv(file_path)
+
+            X = data["text"]
+            y = data["label"]
+
+            # Crear nuevo pipeline
+            pipeline = create_pipeline()
+            pipeline.fit(X, y)
+
+            # Guardar modelo actualizado
+            save_model(pipeline)
+            model = pipeline
+
+            # Calcular métricas
+            y_pred = pipeline.predict(X)
+            precision = precision_score(y, y_pred, average='weighted')
+            recall = recall_score(y, y_pred, average='weighted')
+            f1 = f1_score(y, y_pred, average='weighted')
+
+            return jsonify({
+                'message': 'Modelo reentrenado exitosamente.',
+                'metrics': {
+                    'precision': precision,
+                    'recall': recall,
+                    'f1_score': f1
+                }
+            })
         else:
             return jsonify({'error': 'Debe proporcionar un archivo válido para reentrenar'}), 400
 
     except Exception as e:
         traceback.print_exc()
         return jsonify({'error': str(e)}), 500
+
 
 if __name__ == '__main__':
     if not os.path.exists(app.config['UPLOAD_FOLDER']):

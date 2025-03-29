@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException, Request, UploadFile, File
+from fastapi import FastAPI, HTTPException, Request
 from pydantic import BaseModel
 from typing import List
 import joblib
@@ -50,7 +50,8 @@ async def predict_endpoint(request: PredictionRequest):
     try:
         y_pred = model.predict([request.text])
         probabilities = model.predict_proba([request.text]).max(axis=1).tolist()
-        return {"prediction": y_pred[0], "probability": probabilities[0]}
+        # Convertir valores a tipos nativos (int y float) para JSON
+        return {"prediction": int(y_pred[0]), "probability": float(probabilities[0])}
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
@@ -60,7 +61,6 @@ async def retrain_endpoint(request: RetrainRequest):
         X = pd.DataFrame(request.data, columns=["text"])
         y = request.target
 
-        # Crear un pipeline que incluya TfidfVectorizer y RandomForestClassifier
         pipeline = Pipeline([
             ('vectorizer', TfidfVectorizer(max_features=10000)),
             ('classifier', RandomForestClassifier(n_estimators=20, random_state=42))

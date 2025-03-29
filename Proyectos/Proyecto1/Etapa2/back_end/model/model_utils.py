@@ -13,7 +13,7 @@ def save_model(model, model_path):
     joblib.dump(model, model_path)
 
 def predict(model, instances):
-    """Realiza predicciones usando el pipeline que procesa el texto directamente."""
+    """Realiza predicciones usando el pipeline que procesa texto directamente."""
     predictions = []
     for instance in instances:
         text = instance.get('text_input', '')
@@ -24,8 +24,8 @@ def predict(model, instances):
         y_pred = model.predict([text])
         probas = model.predict_proba([text])
         predictions.append({
-            'prediction': y_pred[0],
-            'probability': round(float(max(probas[0])), 4)
+            'prediction': int(y_pred[0]),  # Convertir a int
+            'probability': float(round(max(probas[0]), 4))  # Convertir a float
         })
     return predictions
 
@@ -41,8 +41,8 @@ def predict_from_file(model, file_path):
             y_pred = model.predict([text])
             probas = model.predict_proba([text])
             predictions.append({
-                'prediction': y_pred[0],
-                'probability': round(float(max(probas[0])), 4)
+                'prediction': int(y_pred[0]),
+                'probability': float(round(max(probas[0]), 4))
             })
     return predictions
 
@@ -52,7 +52,7 @@ def retrain_model(model_path, file_path):
     Se espera que el archivo tenga las columnas 'Título', 'Descripción' y 'Label'.
     """
     if file_path.lower().endswith('.csv'):
-        # Ajusta el separador si es necesario (en este ejemplo se usa ";" si es CSV)
+        # Ajusta el separador según corresponda (en este ejemplo se usa ";" si es CSV)
         data = pd.read_csv(file_path, encoding="utf-8", sep=";")
     elif file_path.lower().endswith(('.xls', '.xlsx')):
         data = pd.read_excel(file_path, engine='openpyxl')
@@ -71,7 +71,7 @@ def retrain_model(model_path, file_path):
     from sklearn.model_selection import train_test_split
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
     
-    # Concatenar Título y Descripción para formar el texto completo
+    # Concatenar 'Título' y 'Descripción' para formar la entrada de texto completa
     X_train_text = (X_train['Título'] + " " + X_train['Descripción']).astype(str)
     X_test_text = (X_test['Título'] + " " + X_test['Descripción']).astype(str)
     
@@ -90,6 +90,6 @@ def retrain_model(model_path, file_path):
         'accuracy': accuracy_score(y_test, y_pred),
         'precision': precision_score(y_test, y_pred, average='weighted'),
         'recall': recall_score(y_test, y_pred, average='weighted'),
-        'f1_score': f1_score(y_test, y_pred, average='weighted'),
+        'f1_score': f1_score(y_test, y_pred, average='weighted')
     }
     return pipeline, metrics

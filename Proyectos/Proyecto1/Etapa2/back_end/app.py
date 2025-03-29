@@ -4,7 +4,10 @@ import os
 import traceback
 import model.model_utils as model_utils  # Funciones para cargar/reentrenar el modelo
 
-app = Flask(__name__)
+# Especificamos las rutas de las carpetas de plantillas y estáticos
+app = Flask(__name__, 
+            template_folder='../front_end/templates', 
+            static_folder='../front_end/static')
 
 # Ruta para archivo del modelo
 MODEL_PATH = 'model/model.pkl'
@@ -18,12 +21,10 @@ model = None
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
-
 @app.route('/')
 def index():
     """Renderiza la interfaz principal."""
     return render_template('index.html')
-
 
 @app.route('/load_model', methods=['POST'])
 def load_model():
@@ -42,7 +43,6 @@ def load_model():
             return jsonify({'error': str(e)}), 500
     else:
         return jsonify({'error': 'Debe proporcionar un archivo .pkl válido'}), 400
-
 
 @app.route('/predict', methods=['POST'])
 def predict():
@@ -72,7 +72,6 @@ def predict():
         traceback.print_exc()
         return jsonify({'error': str(e)}), 500
 
-
 @app.route('/retrain', methods=['POST'])
 def retrain():
     """Endpoint para reentrenar el modelo."""
@@ -96,7 +95,6 @@ def retrain():
     except Exception as e:
         traceback.print_exc()
         return jsonify({'error': str(e)}), 500
-
 
 if __name__ == '__main__':
     if not os.path.exists(app.config['UPLOAD_FOLDER']):

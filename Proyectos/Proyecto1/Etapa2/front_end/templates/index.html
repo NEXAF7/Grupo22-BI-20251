@@ -39,15 +39,18 @@
       <section class="card">
         <h2>Predicción</h2>
         <form id="predict-form">
-          <label for="text">Texto de la noticia:</label>
+          <label for="Descripcion">Texto de la noticia:</label>
           <input
             type="text"
-            id="text"
-            name="text"
+            id="Descripcion"
+            name="Descripcion"
             placeholder="Escribe el contenido de la noticia..."
           />
+
+          <!-- Input de archivo opcional -->
           <label for="opinion_file">Archivo (opcional):</label>
           <input type="file" id="opinion_file" name="opinion_file" />
+
           <button type="submit" class="btn-primary">Enviar a Predicción</button>
         </form>
         <div id="predict-result"></div>

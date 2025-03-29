@@ -135,10 +135,16 @@ def retrain():
         if labels_file and allowed_file(labels_file.filename):
             file_path = os.path.join(app.config['UPLOAD_FOLDER'], secure_filename(labels_file.filename))
             labels_file.save(file_path)
-            # Se lee el archivo Excel o CSV según la extensión
             data = pd.read_excel(file_path) if file_path.endswith(".xlsx") else pd.read_csv(file_path, sep=';')
             
-            # Se utilizan las columnas 'Descripcion' y 'label' como variables de interés
+            # Limpieza y normalización de nombres de columnas
+            data.columns = data.columns.str.strip()   # Quita espacios en blanco
+            data.columns = data.columns.str.lower()     # Convierte a minúsculas
+            if 'descripcion' in data.columns:
+                data.rename(columns={'descripcion': 'Descripcion'}, inplace=True)
+            if 'label' in data.columns:
+                data.rename(columns={'label': 'label'}, inplace=True)
+            
             if "Descripcion" not in data.columns or "label" not in data.columns:
                 return jsonify({'error': 'El archivo debe contener las columnas "Descripcion" y "label"'}), 400
 

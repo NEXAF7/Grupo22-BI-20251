@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from typing import List
 import joblib
@@ -8,11 +8,8 @@ from sklearn.metrics import precision_score, recall_score, f1_score
 from sklearn.pipeline import Pipeline
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.ensemble import RandomForestClassifier
-import json
 import logging
-from datetime import datetime
 
-# Configuración de logging
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
@@ -23,22 +20,40 @@ app = FastAPI()
 
 MODEL_PATH = "model/model.pkl"
 
-# Esquema para solicitudes de predicción
 class PredictionRequest(BaseModel):
     text: str
 
-# Esquema para solicitudes de reentrenamiento
 class RetrainRequest(BaseModel):
-    data: List[str]  # Cada entrada es un texto (por ejemplo, concatenación de Título y Descripción)
+    data: List[str]
     target: List[int]
 
 def load_model():
     if os.path.exists(MODEL_PATH):
-        return joblib.load(MODEL_PATH)
+        model = joblib.load(MODEL_PATH)
+        if not isinstance(model, Pipeline):
+            logger.error("El modelo cargado no es un Pipeline válido.")
+            raise HTTPException(
+                status_code=500,
+                detail="El modelo cargado no es un Pipeline válido. Asegúrate de haber entrenado y guardado un pipeline."
+            )
+        logger.info(f"Modelo cargado exitosamente desde {MODEL_PATH}.")
+        return model
+    logger.error(f"Modelo no encontrado en {MODEL_PATH}.")
     raise HTTPException(status_code=404, detail="Modelo no encontrado")
 
 def save_model(model):
-    joblib.dump(model, MODEL_PATH)
+    try:
+        joblib.dump(model, MODEL_PATH)
+        logger.info(f"Modelo guardado correctamente en {MODEL_PATH}.")
+    except Exception as e:
+        logger.error(f"Error al guardar el modelo: {e}")
+        raise HTTPException(status_code=500, detail="Error al guardar el modelo.")
+
+def create_pipeline():
+    return Pipeline([
+        ('vectorizer', TfidfVectorizer(max_features=10000)),
+        ('classifier', RandomForestClassifier(n_estimators=20, random_state=42))
+    ])
 
 @app.get("/")
 def read_root():
@@ -49,23 +64,28 @@ async def predict_endpoint(request: PredictionRequest):
     model = load_model()
     try:
         y_pred = model.predict([request.text])
-        probabilities = model.predict_proba([request.text]).max(axis=1).tolist()
-        # Convertir valores a tipos nativos (int y float) para JSON
-        return {"prediction": int(y_pred[0]), "probability": float(probabilities[0])}
+        probabilities = model.predict_proba([request.text])[0] 
+        max_probability = max(probabilities) 
+        return {
+            "prediction": int(y_pred[0]),
+            "probability": float(max_probability),
+            "class_probabilities": probabilities.tolist()  
+        }
     except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        logger.error(f"Error en predict_endpoint: {e}")
+        raise HTTPException(status_code=400, detail=f"Error en la predicción: {str(e)}")
 
 @app.post("/retrain")
 async def retrain_endpoint(request: RetrainRequest):
     try:
+        if len(request.data) != len(request.target):
+            logger.error("El tamaño de los datos y las etiquetas no coincide.")
+            raise HTTPException(status_code=400, detail="El tamaño de los datos y las etiquetas no coincide.")
+
         X = pd.DataFrame(request.data, columns=["text"])
         y = request.target
 
-        pipeline = Pipeline([
-            ('vectorizer', TfidfVectorizer(max_features=10000)),
-            ('classifier', RandomForestClassifier(n_estimators=20, random_state=42))
-        ])
-
+        pipeline = create_pipeline()
         pipeline.fit(X["text"], y)
         save_model(pipeline)
 
@@ -74,9 +94,15 @@ async def retrain_endpoint(request: RetrainRequest):
         recall = recall_score(y, y_pred, average='weighted')
         f1 = f1_score(y, y_pred, average='weighted')
 
-        return {"precision": precision, "recall": recall, "f1_score": f1}
+        logger.info("Modelo reentrenado exitosamente.")
+        return {
+            "precision": precision,
+            "recall": recall,
+            "f1_score": f1
+        }
     except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        logger.error(f"Error en retrain_endpoint: {e}")
+        raise HTTPException(status_code=400, detail=f"Error al reentrenar el modelo: {str(e)}")
 
 RETRAINING_STRATEGIES = [
     {

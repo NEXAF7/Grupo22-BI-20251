@@ -1,22 +1,70 @@
-body {
-  font-family: Arial, sans-serif;
+/* Variables para temas */
+:root {
+  --primary-color: #4caf50; /* Verde principal */
+  --primary-hover: #45a049; /* Hover del verde */
+  --secondary-color: #212121; /* Fondo oscuro */
+  --text-color: #333; /* Texto general */
+  --background-color: #f9f9f9; /* Fondo general */
+  --card-background: #ffffff; /* Fondo de tarjetas */
+  --card-border: #e0e0e0; /* Borde de tarjetas */
+}
+
+/* Reset */
+* {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
-  background-color: #f9f9f9;
 }
 
-header {
-  background-color: #4caf50;
+/* Body */
+body {
+  font-family: "Poppins", sans-serif;
+  background-color: var(--background-color);
+  color: var(--text-color);
+  line-height: 1.6;
+}
+
+/* Header */
+.header {
+  background-color: var(--primary-color);
   color: white;
   text-align: center;
-  padding: 20px 10px;
+  padding: 30px 15px;
+  box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
 }
 
-main {
-  margin: 20px;
+/* Container */
+.container {
+  display: grid;
+  gap: 20px;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  margin: 40px auto;
+  padding: 20px;
+  max-width: 1200px;
 }
 
+/* Cards */
+.card {
+  background-color: var(--card-background);
+  border: 1px solid var(--card-border);
+  border-radius: 10px;
+  padding: 20px 15px;
+  box-shadow: 0px 2px 4px rgba(0, 0, 0, 0.1);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.card:hover {
+  transform: scale(1.02);
+  box-shadow: 0px 5px 15px rgba(0, 0, 0, 0.2);
+}
+
+.card h2 {
+  color: var(--primary-color);
+  margin-bottom: 15px;
+  font-size: 20px;
+}
+
+/* Formularios */
 form {
   display: flex;
   flex-direction: column;
@@ -24,44 +72,52 @@ form {
 }
 
 form label {
-  font-weight: bold;
+  font-weight: 600;
+  color: var(--primary-color);
 }
 
-form input,
-form button {
+form input {
   padding: 10px;
   font-size: 16px;
+  border: 1px solid var(--card-border);
+  border-radius: 5px;
 }
 
-button {
-  background-color: #4caf50;
+form .btn-primary {
+  padding: 10px;
+  font-size: 16px;
+  background-color: var(--primary-color);
   color: white;
   border: none;
+  border-radius: 5px;
   cursor: pointer;
+  transition: background-color 0.2s ease;
 }
 
-button:hover {
-  background-color: #45a049;
+form .btn-primary:hover {
+  background-color: var(--primary-hover);
 }
 
-hr {
-  margin: 20px 0;
+/* Resultados */
+#predict-result,
+#retrain-result,
+#load-model-result {
+  margin-top: 15px;
+  padding: 10px;
+  background-color: var(--background-color);
+  border: 1px solid var(--card-border);
+  border-radius: 5px;
+  font-family: "Courier New", Courier, monospace;
+  font-size: 14px;
+  color: var(--text-color);
 }
 
-footer {
-  background-color: #4caf50;
+/* Footer */
+.footer {
+  background-color: var(--secondary-color);
   color: white;
   text-align: center;
-  padding: 10px 5px;
-  position: fixed;
-  bottom: 0;
-  width: 100%;
-}
-
-#predict-result,
-#retrain-result {
+  padding: 20px;
+  font-size: 14px;
   margin-top: 20px;
-  padding: 10px;
-  background-color: #e0e0e0;
-  border-radius: 5px;
 }
